@@ -1,0 +1,17 @@
+#ifndef LOGH
+#define LOGH
+
+enum STACK_EVENTS
+{
+    STACK_CTOR,
+    STACK_DTOR,
+    STACK_SET_SIZE,
+    STACK_SET_CAPACITY,
+    STACK_RESIZE,
+    STACK_REALLOC,
+    STACK_PUSH,
+    STACK_POP,
+    N_STACK_EVENTS
+}
+
+#endif
