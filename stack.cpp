@@ -1,15 +1,28 @@
-#include "stack.h"
 #include <math.h>
+#include "stack.h"
+#include "log.h"
 
 const long int POISON = 0xDEADBEEF;
 
-void StackCtor(Stack *stk, long int capacity)
-{
-    stk->data     = calloc(capacity, sizeof(Elem));
+#define StackCtor(stk, capacity) \\
+do {        \\
+            \\
+} while (0); \\
 
-    StackSetSize    (stk, capacity);
-    StackSetCapacity(stk, capacity);
-    StackFillPoison (stk);
+void StackCtor_(Stack *stk, long int capacity, long int line, const char* filename, const char* name)
+{
+    stk->data = (Elem*) calloc(capacity, sizeof(Elem));
+
+    StackSetSize     (stk, capacity);
+    StackSetCapacity (stk, capacity);
+    StackCanaryUpdate(stk);
+    StackFillPoison  (stk, 0, capacity - 1);
+#ifdef _DEBUG
+    StackSetLine    (stk, line);
+    StackSetFilename(stk, filename);
+    StackSetFuncname(stk, funcname);
+    StackSetName    (stk, name)
+#endif
 }
 
 void StackDtor(Stack *stk)
@@ -77,6 +90,7 @@ void StackSetData(Stack *stk, long int ind, Elem value)
 
 long int StackGetSize(Stack *stk)
 {
+    LOG(StackDump(stk));
     return stk->size;
 }
 
@@ -96,3 +110,18 @@ void StackFillPoison(Stack *stk, long int l, long int r)
     for (long int i = l; i < r; ++i)
         stk->data[i] = POISON;
 }
+
+void StackCanaryUpdate(Stack *stk)
+{
+    stk->canary1 = stk->canary2 = POISON;
+}
+
+#ifdef _DEBUG
+
+void StackDump(Stack *stk, long int l, long int r)
+{
+    sprintf(logBuffer, "%s at %s(%d): \n"
+                       "Stack[0x%x] %s 
+}
+
+#endif

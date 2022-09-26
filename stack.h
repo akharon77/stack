@@ -7,11 +7,16 @@ extern const long int POISON;
 
 struct Stack
 {
-    int canary1;
-    int size;
-    int capacity;
+    long int canary1;
+    long int size;
+    long int capacity;
     Elem *data;
-    int canary2;
+#ifdef _DEBUG
+    long int line;
+    const char* filename;
+    const char* name;
+#endif
+    long int canary2;
 };
 
 void StackCtor(Stack *stk, int cap);
