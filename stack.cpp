@@ -7,7 +7,7 @@ const long int POISON = 0xDEADBEEF;
 #define StackCtor(stk, capacity) \\
 do {        \\
             \\
-} while (0); \\
+} while (0) \\
 
 void StackCtor_(Stack *stk, long int capacity, long int line, const char* filename, const char* name)
 {
