@@ -3,3 +3,5 @@
 *.d
 *.txt
 *.log
+*.ii
+vgcore*

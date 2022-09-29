@@ -1,6 +1,8 @@
 #include <math.h>
 #include <stdio.h>
-#include "log.h"
+#include <unistd.h>
+#include <fcntl.h>
+#include "stack.h"
 
 const long int POISON = 0xDEADBEEF;
 const long int CANARY = 0xBADC0FFEE;
@@ -14,19 +16,20 @@ void StackCtor_(
                 ON_DEBUG(, const char* name)
                )
 {
-    Elem* data = (Elem*) calloc(capacity ON_CANARY_PROT(+2), sizeof(Elem));
+    capacity += 0 ON_CANARY_PROT(+2);
+    Elem* data = (Elem*) calloc(capacity, sizeof(Elem));
 
-    StackSetDataMem (stk, data ON_CANARY_PROT(+1));
-    StackSetSize    (stk, capacity);
-    StackSetCapacity(stk, capacity);
-    StackFillPoison (stk, 0, capacity);
+    stk->data = data ON_CANARY_PROT(+1);
+    stk->size = 0;
+    stk->capacity = capacity;
+    StackFillPoison (stk, 0, stk->capacity);
 
     ON_CANARY_PROT(StackCanaryUpdate(stk);)
 
-    ON_DEBUG(StackSetLine    (stk, line);)
-    ON_DEBUG(StackSetFilename(stk, filename);)
-    ON_DEBUG(StackSetFuncname(stk, funcname);)
-    ON_DEBUG(StackSetName    (stk, name);)
+    ON_DEBUG(StackSetLine     (stk, line);)
+    ON_DEBUG(StackSetFilename (stk, filename);)
+    ON_DEBUG(StackSetFuncname (stk, funcname);)
+    ON_DEBUG(StackSetName     (stk, name);)
 
     LOG(STACK_CTOR, stk);
 }
@@ -35,7 +38,7 @@ void StackDtor(Stack *stk)
 {
     free(stk->data ON_CANARY_PROT(-1));
     LOG(STACK_DTOR, stk);
-    closeLogBuffer();
+    ON_DEBUG(closeLogBuffer();)
 }
 
 // ----------------------------
@@ -64,12 +67,12 @@ Elem StackPop(Stack *stk)
 // --------------RE-METHODS--------------
 void StackResize(Stack *stk, long int size)
 {
-    if (size >= stk->capacity)
+    if (size > stk->capacity)
     {
         long int incCoeffCapacity = stk->capacity * StackGetCoeff(stk);
         StackRealloc(stk, MAX(size, incCoeffCapacity));
     }
-    else
+    else if (size < stk->size)
     {
         long int coeff = StackGetCoeff(stk);
         long int decCoeffCapacity = stk->capacity / (coeff * coeff);
@@ -117,7 +120,7 @@ void StackSetDataMem(Stack *stk, Elem *data)
 }
 void StackSetData(Stack *stk, long int ind, Elem value)
 {
-    stk->data[ind ON_CANARY_PROT(+1)] = value;
+    stk->data[ind] = value;
     LOG(STACK_SET_DATA, stk);
 }
 
@@ -131,30 +134,32 @@ void StackFillPoison(Stack *stk, long int l, long int r)
 ON_CANARY_PROT(
     void StackCanaryUpdate(Stack *stk)
     {
-        stk->data[-1]       = CANARY;
-        stk->data[capacity] = CANARY;
+        stk->data[-1]                = CANARY;
+        stk->data[stk->capacity - 1] = CANARY;
+        LOG(STACK_CANARY_UPDATE, stk);
     }
-    LOG(STACK_CANARY_UPDATE, stk);
 )
 
 // --------------GETTERS--------------
 
 long int StackGetSize(Stack *stk)
 {
-    LOG(STACK_GET_SIZE, stk);
     return stk->size;
 }
 
 long int StackGetCapacity(Stack *stk)
 {
-    LOG(STACK_GET_CAPACITY, stk);
     return stk->capacity;
 }
 
 long int StackGetData(Stack *stk, long int ind)
 {
-    LOG(STACK_GET_DATA, stk);
     return stk->data[ind ON_CANARY_PROT(+1)];
+}
+
+Elem *StackGetDataMem(Stack *stk)
+{
+    return stk->data;
 }
 
 long int StackGetCoeff(Stack *stk)
@@ -165,13 +170,11 @@ long int StackGetCoeff(Stack *stk)
 ON_DEBUG(
     long int StackGetLine(Stack *stk)
     {
-        LOG(STACK_GET_LINE, stk);
         return stk->line;
     }
 
     const char* StackGetFilename(Stack *stk)
     {
-        LOG(STACK_GET_FILENAME, stk);
         return stk->filename;
     }
 
@@ -215,22 +218,48 @@ ON_DEBUG(
 // --------------error??--------------
 
 ON_DEBUG(
-    void StackDump(const Stack *stk)
+    void StackDump(Stack *stk)
     {
         int fdLogBuffer = getfdLogBuffer();
-        dprintf(fdLogBuffer, "Stack[%p] \"%s\" at %s in %s(%d): \n"
-                           "{\n\tsize = %d, \n",
-                           "\tcapacity = %d, \n",
+        dprintf(fdLogBuffer, "Stack[%p] \"%s\" at %s in %s(%ld): \n"
+                           "{\n\tsize = %ld, \n"
+                           "\tcapacity = %ld, \n"
                            "\tdata[%p]\n{\n",
-                           (void*) stk, stk->name, stk->funcname, stk->filename, stk->line,
-                           stk->size,
-                           stk->capacity,
-                           stk->data);
-        for (long int i = 0; i < stk->capacity; ++i)
+                           stk, StackGetName(stk), StackGetFuncname(stk), StackGetFilename(stk), StackGetLine(stk),
+                           StackGetSize(stk),
+                           StackGetCapacity(stk),
+                           StackGetDataMem(stk));
+        for (long int i = 0; i < StackGetCapacity(stk); ++i)
         {
-            dprintf(fdLogBuffer, "\t[%d] = %d\n",
-                               i, stk->data[i]);
+            dprintf(fdLogBuffer, "\t[%ld] = %ld\n",
+                               i, stk->data[i ON_CANARY_PROT(-1)]);
         }
         dprintf(fdLogBuffer, "}\n");
+    }
+
+    static int fdLogBuffer = -1;
+
+    int getfdLogBuffer()
+    {
+        if (fdLogBuffer == -1)
+        {
+            fdLogBuffer = creat(LOG_FILENAME, S_IRWXU);
+        }
+        return fdLogBuffer;
+    }
+
+    void closeLogBuffer()
+    {
+        close(fdLogBuffer);
+        fdLogBuffer = -1;
+    }
+
+    void logToBuffer(const char* event, Stack *stk)
+    {
+        ON_DEBUG(
+            fdLogBuffer = getfdLogBuffer();
+            dprintf(fdLogBuffer, "[%s]\n", event);
+            StackDump(stk);
+        )
     }
 )

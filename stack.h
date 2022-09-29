@@ -2,7 +2,6 @@
 #define STACKH
 
 #include <math.h>
-#include "log.h"
 
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 
@@ -22,6 +21,44 @@
 #define ON_DEBUG(...) __VA_ARGS__
 #else
 #define ON_DEBUG(...)
+#endif
+
+#ifdef _DEBUG
+#define STACK_CTOR
+#define STACK_PUSH
+#define STACK_TOP
+#define STACK_POP
+#define STACK_RESIZE
+#define STACK_REALLOC
+#define STACK_CANARY_UPDATE
+#define STACK_FILL_POISON
+#define STACK_SET_DATA
+#define STACK_SET_DATA_MEM
+#define STACK_SET_SIZE
+#define STACK_SET_CAPACITY
+#define STACK_SET_LINE
+#define STACK_SET_FILENAME
+#define STACK_SET_FUNCNAME
+#define STACK_SET_NAME
+#define STACK_GET_NAME
+#define STACK_GET_FUNCNAME
+#define STACK_GET_FILENAME
+#define STACK_GET_LINE
+#define STACK_GET_DATA
+#define STACK_GET_SIZE
+#define STACK_GET_CAPACITY
+#define STACK_GET_DATA_MEM
+
+#define LOG(event, stk)                        \
+do {                                           \
+    dprintf(getfdLogBuffer(), "%s\n", #event); \
+} while (0)
+//    StackDump(stk);                           
+
+#define LOG_FILENAME "stack.log"
+
+#else
+#define LOG(event, stk)
 #endif
 
 extern const long int POISON;
@@ -48,15 +85,23 @@ struct Stack
     )
 };
 
-#define StackCtor(stk, capacity)               \
-StackCtor_(                                    \
-           stk,                                \
-           capacity                            \
-           ON_DEBUG(, __LINE__)                \
-           ON_DEBUG(, __FILE__)                \
-           ON_DEBUG(, __FUNCTION__)            \
-           ON_DEBUG(, #stk + (#stk[0] == '&')) \
+#ifdef _DEBUG
+#define StackCtor(stk, capacity)   \
+StackCtor_(                        \
+           stk,                    \
+           capacity,               \
+           __LINE__,               \
+           __FILE__,               \
+           __FUNCTION__,           \
+           #stk + (#stk[0] == '&') \
           )
+#else
+#define StackCtor(stk, capacity)   \
+StackCtor_(                        \
+           stk,                    \
+           capacity,               \
+          )
+#endif
 
 void StackCtor_(
                 Stack *stk,
@@ -81,12 +126,13 @@ void StackFillPoison(Stack *stk, long int l, long int r);
 long int StackGetSize(Stack *stk);
 long int StackGetCapacity(Stack *stk);
 long int StackGetData(Stack *stk, long int ind);
+Elem *StackGetDataMem(Stack *stk);
 long int StackGetCoeff(Stack *stk);
 
 ON_CANARY_PROT(void StackCanaryUpdate(Stack *stk);)
 
 ON_DEBUG(
-    void StackDump(const Stack *stk);
+    void StackDump(Stack *stk);
     long int StackGetLine(Stack *stk);
     const char* StackGetName(Stack *stk);
     const char* StackGetFuncname(Stack *stk);
@@ -95,6 +141,9 @@ ON_DEBUG(
     void StackSetName(Stack *stk, const char *name);
     void StackSetFuncname(Stack *stk, const char *funcname);
     void StackSetFilename(Stack *stk, const char *filename);
+    int getfdLogBuffer();
+    void closeLogBuffer();
+    void logToBuffer(const char* event, Stack *stk);
 )
 
 #endif
