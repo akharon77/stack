@@ -2,9 +2,11 @@
 
 int main()
 {
-    Stack stk;
-    StackCtor(&stk, 10);
-    StackPush(&stk, 1);
-    StackDtor(&stk);
+    Stack stkLol;
+    StackCtor(&stkLol, 10);
+    StackPush(&stkLol, 1);
+    StackPop(&stkLol);
+    StackPop(&stkLol);
+    StackDtor(&stkLol);
     return 0;
 }

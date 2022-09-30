@@ -8,6 +8,17 @@
 #include <stdint.h>
 #include <assert.h>
 
+#define ASSERT(expr)                                        \
+do {                                                        \
+    if (!(expr))                                            \
+        fprintf(stderr,                                     \
+                "Assertion failed. Expression: " #expr "\n" \
+                "File: %s, line: %d\n"                      \
+                "Function: %s\n",                           \
+                __FILE__, __LINE__,                         \
+                __PRETTY_FUNCTION__);                       \
+} while(0)
+
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 
 #ifdef CANARY_PROT
@@ -119,6 +130,7 @@ long int    StackGetCapacity   (Stack *stk);
 long int    StackGetData       (Stack *stk, long int ind);
 Elem*       StackGetDataMem    (Stack *stk);
 long int    StackGetCoeff      (Stack *stk);
+bool        isBadPtr           (void *ptr);
 ON_CANARY_PROT(
 void        StackCanaryUpdate  (Stack *stk);
 )
@@ -156,8 +168,10 @@ void StackCtor_(
                 ON_DEBUG(, const char* name)
                )
 {
+    ASSERT(!isBadPtr(stk));
     Elem* data = (Elem*) calloc(capacity ON_CANARY_PROT(+2), sizeof(Elem));
 
+    ASSERT(!isBadPtr(stk));
     stk->data     = data ON_CANARY_PROT(+1);
     stk->size     = 0;
     stk->capacity = capacity;
@@ -175,6 +189,7 @@ void StackCtor_(
 
 void StackDtor(Stack *stk)
 {
+    ASSERT(!isBadPtr(stk));
     STACK_OK(stk);
     free(stk->data ON_CANARY_PROT(-1));
     ON_DEBUG(closeLogBuffer();)
@@ -184,6 +199,7 @@ void StackDtor(Stack *stk)
 
 void StackPush(Stack *stk, Elem el)
 {
+    ASSERT(!isBadPtr(stk));
     STACK_OK(stk);
     StackResize (stk, stk->size + 1);
     StackSetData(stk, stk->size - 1, el);
@@ -192,12 +208,16 @@ void StackPush(Stack *stk, Elem el)
 
 Elem StackTop(Stack *stk)
 {
+    ASSERT(!isBadPtr(stk));
+    ASSERT(StackGetSize(stk) > 0);
     STACK_OK(stk);
     return StackGetData(stk, stk->size - 1);
 }
 
 Elem StackPop(Stack *stk)
 {
+    ASSERT(!isBadPtr(stk));
+    ASSERT(StackGetSize(stk) > 0);
     STACK_OK(stk);
     Elem res = StackTop(stk);
     StackSetData(stk, stk->size - 1, POISON);
@@ -209,6 +229,7 @@ Elem StackPop(Stack *stk)
 // --------------RE-METHODS--------------
 void StackResize(Stack *stk, long int size)
 {
+    ASSERT(!isBadPtr(stk));
     STACK_OK(stk);
 
     if (size > stk->capacity)
@@ -229,12 +250,14 @@ void StackResize(Stack *stk, long int size)
 
 void StackRealloc(Stack *stk, long int capacity)
 {
+    ASSERT(!isBadPtr(stk));
     STACK_OK(stk);
 
     if (capacity == stk->capacity)
         return;
 
     Elem *newData = (Elem*) realloc(stk->data, capacity ON_CANARY_PROT(+2));
+    ASSERT(!isBadPtr(newData));
 
     StackSetDataMem (stk, newData ON_CANARY_PROT(+1));
     StackSetCapacity(stk, capacity);
@@ -247,29 +270,34 @@ void StackRealloc(Stack *stk, long int capacity)
 
 void StackSetSize(Stack *stk, long int size)
 {
+    ASSERT(!isBadPtr(stk));
     stk->size = size;
     ON_HASH_PROT(StackEvaluateHash(stk);)
 }
 
 void StackSetCapacity(Stack *stk, long int capacity)
 {
+    ASSERT(!isBadPtr(stk));
     stk->capacity = capacity;
     ON_HASH_PROT(StackEvaluateHash(stk);)
 }
 
 void StackSetDataMem(Stack *stk, Elem *data)
 {
+    ASSERT(!isBadPtr(stk));
     stk->data = data;
     ON_HASH_PROT(StackEvaluateHash(stk);)
 }
 void StackSetData(Stack *stk, long int ind, Elem value)
 {
+    ASSERT(!isBadPtr(stk));
     stk->data[ind] = value;
     ON_HASH_PROT(StackEvaluateHash(stk);)
 }
 
 void StackFillPoison(Stack *stk, long int l, long int r)
 {
+    ASSERT(!isBadPtr(stk));
     for (long int i = l; i < r; ++i)
         StackSetData(stk, i, POISON);
     ON_HASH_PROT(StackEvaluateHash(stk);)
@@ -278,6 +306,7 @@ void StackFillPoison(Stack *stk, long int l, long int r)
 ON_CANARY_PROT(
     void StackCanaryUpdate(Stack *stk)
     {
+        ASSERT(!isBadPtr(stk));
         stk->data[-1]            = CANARY;
         stk->data[stk->capacity] = CANARY;
         ON_HASH_PROT(StackEvaluateHash(stk);)
@@ -288,70 +317,83 @@ ON_CANARY_PROT(
 
 long int StackGetSize(Stack *stk)
 {
+    ASSERT(!isBadPtr(stk));
     return stk->size;
 }
 
 long int StackGetCapacity(Stack *stk)
 {
+    ASSERT(!isBadPtr(stk));
     return stk->capacity;
 }
 
 long int StackGetData(Stack *stk, long int ind)
 {
+    ASSERT(!isBadPtr(stk));
     return stk->data[ind];
 }
 
 Elem *StackGetDataMem(Stack *stk)
 {
+    ASSERT(!isBadPtr(stk));
     return stk->data;
 }
 
 long int StackGetCoeff(Stack *stk)
 {
+    ASSERT(!isBadPtr(stk));
     return 2;
 }
 
 ON_DEBUG(
     long int StackGetLine(Stack *stk)
     {
+        ASSERT(!isBadPtr(stk));
         return stk->line;
     }
 
     const char* StackGetFilename(Stack *stk)
     {
+        ASSERT(!isBadPtr(stk));
         return stk->filename;
     }
 
     const char* StackGetFuncname(Stack *stk)
     {
+        ASSERT(!isBadPtr(stk));
         return stk->funcname;
     }
 
     const char* StackGetName(Stack *stk)
     {
+        ASSERT(!isBadPtr(stk));
         return stk->name;
     }
 
     void StackSetLine(Stack *stk, long int line)
     {
+        ASSERT(!isBadPtr(stk));
         stk->line = line;
         ON_HASH_PROT(StackEvaluateHash(stk);)
     }
 
     void StackSetFilename(Stack *stk, const char *filename)
     {
+        ASSERT(!isBadPtr(stk));
         stk->filename = filename;
         ON_HASH_PROT(StackEvaluateHash(stk);)
     }
 
     void StackSetFuncname(Stack *stk, const char *funcname)
     {
+        ASSERT(!isBadPtr(stk));
         stk->funcname = funcname;
         ON_HASH_PROT(StackEvaluateHash(stk);)
     }
 
     void StackSetName(Stack *stk, const char *name)
     {
+        ASSERT(!isBadPtr(stk));
         stk->name = name;
         ON_HASH_PROT(StackEvaluateHash(stk);)
     }
@@ -361,6 +403,7 @@ ON_DEBUG(
 
 const char* StackGetStatus(Stack *stk)
 {
+    ASSERT(!isBadPtr(stk));
     static char status[512] = "";
     long int flags = StackError(stk);
     if (flags == 0)
@@ -392,6 +435,7 @@ ON_HASH_PROT(
 
 uint32_t StackError(Stack *stk)
 {
+    ASSERT(!isBadPtr(stk));
     long int flags = 0;
 
     flags |= (StackGetSize(stk)     < 0)                          ? STACK_SIZE_NEG_ERROR         : 0;
@@ -435,15 +479,16 @@ void closeLogBuffer()
 void StackDump(Stack *stk, const char* func, const char* file, long int line)
 {
 ON_DEBUG(
+    ASSERT(!isBadPtr(stk));
     int fdLogBuffer = getfdLogBuffer();
 
-    dprintf(fdLogBuffer,"StackDump: from %s in %s(%d)\n"
+    dprintf(fdLogBuffer,"StackDump: from %s in %s(%ld)\n"
                         "Stack[%p]\n"
-                        "Status:\n"
-                        "\"%s\" at %s in %s(%ld): \n"
+                        "Status: %s\n"
+                        "%s at %s in %s(%ld): \n"
                         "{\n\tsize = %ld, \n"
                         "\tcapacity = %ld, \n"
-                        "\tdata[%p]\n{\n",
+                        "\tdata[%p] = \n\t{\n",
                         func, file, line,
                         stk,
                         StackGetStatus(stk),
@@ -470,32 +515,37 @@ ON_CANARY_PROT(
                              StackGetData(stk, StackGetCapacity()));
 )
 
-    dprintf(fdLogBuffer, "}\n");
+    dprintf(fdLogBuffer, "\t}\n}\n");
 )
 }
 
 ON_HASH_PROT(
 void StackSetHashData(Stack *stk, uint64_t hashData)
 {
+    ASSERT(!isBadPtr(stk));
     stk->hashData = hashData;
 }
 void StackSetHashStk(Stack *stk, uint64_t hashStk)
 {
+    ASSERT(!isBadPtr(stk));
     stk->hashStk = hashStk;
 }
 
 uint64_t StackGetHashData(Stack *stk)
 {
+    ASSERT(!isBadPtr(stk));
     return stk->hashData;
 }
 
 uint64_t StackGetHashStk(Stack *stk)
 {
+    ASSERT(!isBadPtr(stk));
     return stk->hashStk;
 }
 
 void StackEvaluateHash(Stack *stk)
 {
+    ASSERT(!isBadPtr(stk));
     static const uint64_t x = random() % 500ull;
     uint64_t hashData = 0, hashStk = 0;
     for (long int i = 0; i < StackGetCapacity(stk); ++i)
@@ -509,4 +559,13 @@ void StackEvaluateHash(Stack *stk)
 
 )
 
+bool isBadPtr(void *ptr)
+{
+    if (ptr == NULL)
+        return false;
+    int nullfd = open("/dev/random", O_WRONLY);
+    bool res = write(nullfd, (char*) ptr, 1) < 0;
+    close(nullfd);
+    return res;
+}
 #endif
