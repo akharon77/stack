@@ -561,8 +561,8 @@ uint64_t StackEvaluateHashData(Stack *stk)
     ASSERT(!isBadPtr(stk));
     static const uint64_t x = 677;
     uint64_t hashData = 0;
-    for (long int i = 0; i < sizeof(stk->data ON_CANARY_PROT(-1)); ++i)
-        hashData = hashData * x + ((char*)stk->data)[i];
+    for (long int i = 0; i < stk->capacity; ++i)
+        hashData = hashData * x + stk->data[i];
     return hashData;
 }
 
