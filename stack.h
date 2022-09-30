@@ -589,7 +589,7 @@ void StackRehash(Stack *stk)
 bool isBadPtr(void *ptr)
 {
     if (ptr == NULL)
-        return false;
+        return true;
     int nullfd = open("/dev/random", O_WRONLY);
     bool res = write(nullfd, (char*) ptr, 1) < 0;
     close(nullfd);
