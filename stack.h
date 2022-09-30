@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <stdint.h>
 #include <assert.h>
+#include <string.h>
 
 #define ASSERT(expr)                                        \
 do {                                                        \
@@ -67,8 +68,6 @@ ON_HASH_PROT(
 )
     STACK_DATA_POSION_ERROR         = 1 << 6
 };
-
-#define Elem long int
 
 struct Stack
 {
@@ -223,6 +222,10 @@ Elem StackPop(Stack *stk)
 {
     STACK_OK(stk);
     ASSERT(!isBadPtr(stk));
+    if (StackGetSize(stk) < 0)
+    {
+        printf("Stack is empty\n");
+    }
     ASSERT(StackGetSize(stk) > 0);
     Elem res = StackTop(stk);
     StackSetData(stk, stk->size - 1, POISON);
@@ -246,7 +249,8 @@ void StackResize(Stack *stk, long int size)
     {
         long int coeff = StackGetCoeff(stk);
         long int decCoeffCapacity = stk->capacity / (coeff * coeff);
-        StackRealloc(stk, MAX(size, decCoeffCapacity));
+        if (size < decCoeffCapacity)
+            StackRealloc(stk, decCoeffCapacity);
     }
 
     StackSetSize(stk, size);
@@ -261,7 +265,7 @@ void StackRealloc(Stack *stk, long int capacity)
     if (capacity == stk->capacity)
         return;
 
-    Elem *newData = (Elem*) realloc(stk->data ON_CANARY_PROT(-1), capacity ON_CANARY_PROT(+2));
+    Elem *newData = (Elem*) realloc(stk->data ON_CANARY_PROT(-1), sizeof(Elem) * (capacity ON_CANARY_PROT(+2)));
     ASSERT(!isBadPtr(newData));
 
     StackSetDataMem (stk, newData ON_CANARY_PROT(+1));
@@ -409,35 +413,29 @@ ON_DEBUG(
 const char* StackGetStatus(Stack *stk)
 {
     ASSERT(!isBadPtr(stk));
-    static char status[512] = "";
     long int flags = StackError(stk);
     if (flags == 0)
     {
-        sprintf(status, "(ok)\n");
+        return "(ok)\n";
     }
-    else
-    {
-        sprintf(status, "[ERROR]\n");
-        if (flags || STACK_SIZE_NEG_ERROR)
-            sprintf(status, "Stack size is negative\n");
-        if (flags || STACK_CAPACITY_NEG_ERROR)
-            sprintf(status, "Stack capacity is negative\n");
-        if (flags || STACK_SIZE_G_CAPACITY_ERROR)
-            sprintf(status, "Stack size is greater than capacity\n");
+    if (flags | STACK_SIZE_NEG_ERROR)
+        return "Stack size is negative\n";
+    if (flags | STACK_CAPACITY_NEG_ERROR)
+        return "Stack capacity is negative\n";
+    if (flags | STACK_SIZE_G_CAPACITY_ERROR)
+        return "Stack size is greater than capacity\n";
 ON_CANARY_PROT(
-        if (flags || STACK_CANARY_OVERWRITE_ERROR)
-            sprintf(status, "Stack integrity has been violated, maybe array out of bounds occurred\n");
+    if (flags | STACK_CANARY_OVERWRITE_ERROR)
+        return "Stack integrity has been violated, maybe array out of bounds occurred\n";
 )
 ON_HASH_PROT(
-        if (flags || STACK_HASH_DATA_DISPARITY_ERROR)
-            sprintf(status, "Stack integrity has been violated, an arbitrary element of the stack was accessed\n");
-        if (flags || STACK_HASH_STK_DISPARITY_ERROR)
-            sprintf(status, "Stack integrity has been violated, stack structure was corrputed\n");
+    if (flags | STACK_HASH_DATA_DISPARITY_ERROR)
+        return "Stack integrity has been violated, an arbitrary element of the stack was accessed\n";
+    if (flags | STACK_HASH_STK_DISPARITY_ERROR)
+        return "Stack integrity has been violated, stack structure was corrputed\n";
 )
-        if (flags || STACK_DATA_POSION_ERROR)
-            sprintf(status, "Stack integrity has been violated, unused stack memory accessed\n");
-    }
-    return status;
+    if (flags | STACK_DATA_POSION_ERROR)
+        return "Stack integrity has been violated, unused stack memory accessed\n";
 }
 
 uint32_t StackError(Stack *stk)
@@ -445,13 +443,13 @@ uint32_t StackError(Stack *stk)
     ASSERT(!isBadPtr(stk));
     long int flags = 0;
 
-    flags |= (StackGetSize(stk)     < 0)                          ? STACK_SIZE_NEG_ERROR         : 0;
-    flags |= (StackGetCapacity(stk) < 0)                          ? STACK_CAPACITY_NEG_ERROR     : 0;
-    flags |= (StackGetSize(stk) > StackGetCapacity(stk))          ? STACK_SIZE_G_CAPACITY_ERROR  : 0;
+    flags |= ((StackGetSize(stk)     < 0)                          ? STACK_SIZE_NEG_ERROR         : 0);
+    flags |= ((StackGetCapacity(stk) < 0)                          ? STACK_CAPACITY_NEG_ERROR     : 0);
+    flags |= ((StackGetSize(stk) > StackGetCapacity(stk))          ? STACK_SIZE_G_CAPACITY_ERROR  : 0);
 
 ON_CANARY_PROT(
-    flags |= (StackGetData(stk, -1) != CANARY ||
-              StackGetData(stk, StackGetCapacity(stk)) != CANARY) ? STACK_CANARY_OVERWRITE_ERROR : 0;
+    flags |= ((StackGetData(stk, -1) != CANARY ||
+              StackGetData(stk, StackGetCapacity(stk)) != CANARY) ? STACK_CANARY_OVERWRITE_ERROR : 0);
 )
     if (flags)
         return flags;
