@@ -437,7 +437,7 @@ void StackDump(Stack *stk, const char* func, const char* file, long int line)
 ON_DEBUG(
     int fdLogBuffer = getfdLogBuffer();
 
-    dprintf(fdLogBuffer,"StackDump: from %s in %s(%d)\n",
+    dprintf(fdLogBuffer,"StackDump: from %s in %s(%d)\n"
                         "Stack[%p]\n"
                         "Status:\n"
                         "\"%s\" at %s in %s(%ld): \n"

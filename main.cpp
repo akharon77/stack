@@ -1,4 +1,3 @@
-#define _DEBUG
 #include "stack.h"
 
 int main()
