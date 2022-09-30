@@ -55,19 +55,17 @@ while(0)
 const long int POISON = 0xDEADBEEF;
 const long int CANARY = 0xBADC0FFEE;
 
-enum STACK_ERRORS {
-    STACK_SIZE_G_CAPACITY_ERROR     = 1 << 0,
-    STACK_SIZE_NEG_ERROR            = 1 << 1,
-    STACK_CAPACITY_NEG_ERROR        = 1 << 2,
+uint32_t STACK_SIZE_G_CAPACITY_ERROR     = 1 << 0;
+uint32_t STACK_SIZE_NEG_ERROR            = 1 << 1;
+uint32_t STACK_CAPACITY_NEG_ERROR        = 1 << 2;
 ON_CANARY_PROT(
-    STACK_CANARY_OVERWRITE_ERROR    = 1 << 3,
+uint32_t STACK_CANARY_OVERWRITE_ERROR    = 1 << 3;
 )
 ON_HASH_PROT(
-    STACK_HASH_DATA_DISPARITY_ERROR = 1 << 4,
-    STACK_HASH_STK_DISPARITY_ERROR  = 1 << 5,
+uint32_t STACK_HASH_DATA_DISPARITY_ERROR = 1 << 4;
+uint32_t STACK_HASH_STK_DISPARITY_ERROR  = 1 << 5;
 )
-    STACK_DATA_POSION_ERROR         = 1 << 6
-};
+uint32_t STACK_DATA_POSION_ERROR         = 1 << 6;
 
 struct Stack
 {
@@ -413,28 +411,28 @@ ON_DEBUG(
 const char* StackGetStatus(Stack *stk)
 {
     ASSERT(!isBadPtr(stk));
-    long int flags = StackError(stk);
+    uint32_t flags = StackError(stk);
     if (flags == 0)
     {
         return "(ok)\n";
     }
-    if (flags | STACK_SIZE_NEG_ERROR)
+    if (flags & STACK_SIZE_NEG_ERROR)
         return "Stack size is negative\n";
-    if (flags | STACK_CAPACITY_NEG_ERROR)
+    if (flags & STACK_CAPACITY_NEG_ERROR)
         return "Stack capacity is negative\n";
-    if (flags | STACK_SIZE_G_CAPACITY_ERROR)
+    if (flags & STACK_SIZE_G_CAPACITY_ERROR)
         return "Stack size is greater than capacity\n";
 ON_CANARY_PROT(
-    if (flags | STACK_CANARY_OVERWRITE_ERROR)
+    if (flags & STACK_CANARY_OVERWRITE_ERROR)
         return "Stack integrity has been violated, maybe array out of bounds occurred\n";
 )
 ON_HASH_PROT(
-    if (flags | STACK_HASH_DATA_DISPARITY_ERROR)
+    if (flags & STACK_HASH_DATA_DISPARITY_ERROR)
         return "Stack integrity has been violated, an arbitrary element of the stack was accessed\n";
-    if (flags | STACK_HASH_STK_DISPARITY_ERROR)
+    if (flags & STACK_HASH_STK_DISPARITY_ERROR)
         return "Stack integrity has been violated, stack structure was corrputed\n";
 )
-    if (flags | STACK_DATA_POSION_ERROR)
+    if (flags & STACK_DATA_POSION_ERROR)
         return "Stack integrity has been violated, unused stack memory accessed\n";
 }
 
@@ -563,7 +561,7 @@ uint64_t StackEvaluateHashData(Stack *stk)
     ASSERT(!isBadPtr(stk));
     static const uint64_t x = 677;
     uint64_t hashData = 0;
-    for (long int i = 0; i < sizeof(stk->data) ON_CANARY_PROT(-1); ++i)
+    for (long int i = 0; i < sizeof(stk->data ON_CANARY_PROT(-1)); ++i)
         hashData = hashData * x + ((char*)stk->data)[i];
     return hashData;
 }
