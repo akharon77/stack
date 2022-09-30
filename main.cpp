@@ -4,7 +4,9 @@
 int main()
 {
     Stack stk1;
+    Elem *ptr = (Elem*) calloc(2, sizeof(Elem));
     StackCtor(&stk1, 10);
+    stk1.data = ptr;
     for (int i = 0; i < 10; ++i)
         StackPush(&stk1, i);
     for (int i = 0; i < 5; ++i)
@@ -19,5 +21,6 @@ int main()
         StackPush(&stk1, i);
     stk1.data[10] = 1;
     StackDtor(&stk1);
+    free(ptr);
     return 0;
 }
