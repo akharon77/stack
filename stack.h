@@ -43,8 +43,10 @@ do {                                                        \
 #define STACK_OK(stk)                                        \
 do                                                           \
 {                                                            \
-    if (StackError(stk) != 0)                                \
+    if (StackError(stk) != 0) {                              \
         printf(StackGetStatus(stk));                         \
+        abort();                                             \
+    }                                                        \
     StackDump(stk, __PRETTY_FUNCTION__, __FILE__, __LINE__); \
 }                                                            \
 while(0)
@@ -192,8 +194,8 @@ void StackCtor_(
 
 void StackDtor(Stack *stk)
 {
-    ASSERT(!isBadPtr(stk));
     STACK_OK(stk);
+    ASSERT(!isBadPtr(stk));
     free(stk->data ON_CANARY_PROT(-1));
     ON_DEBUG(closeLogBuffer();)
 }
@@ -202,8 +204,8 @@ void StackDtor(Stack *stk)
 
 void StackPush(Stack *stk, Elem el)
 {
-    ASSERT(!isBadPtr(stk));
     STACK_OK(stk);
+    ASSERT(!isBadPtr(stk));
     StackResize (stk, stk->size + 1);
     StackSetData(stk, stk->size - 1, el);
     ON_HASH_PROT(StackRehash(stk);)
@@ -211,17 +213,17 @@ void StackPush(Stack *stk, Elem el)
 
 Elem StackTop(Stack *stk)
 {
+    STACK_OK(stk);
     ASSERT(!isBadPtr(stk));
     ASSERT(StackGetSize(stk) > 0);
-    STACK_OK(stk);
     return StackGetData(stk, stk->size - 1);
 }
 
 Elem StackPop(Stack *stk)
 {
+    STACK_OK(stk);
     ASSERT(!isBadPtr(stk));
     ASSERT(StackGetSize(stk) > 0);
-    STACK_OK(stk);
     Elem res = StackTop(stk);
     StackSetData(stk, stk->size - 1, POISON);
     StackResize(stk, stk->size - 1);
@@ -232,8 +234,8 @@ Elem StackPop(Stack *stk)
 // --------------RE-METHODS--------------
 void StackResize(Stack *stk, long int size)
 {
-    ASSERT(!isBadPtr(stk));
     STACK_OK(stk);
+    ASSERT(!isBadPtr(stk));
 
     if (size > stk->capacity)
     {
@@ -253,13 +255,13 @@ void StackResize(Stack *stk, long int size)
 
 void StackRealloc(Stack *stk, long int capacity)
 {
-    ASSERT(!isBadPtr(stk));
     STACK_OK(stk);
+    ASSERT(!isBadPtr(stk));
 
     if (capacity == stk->capacity)
         return;
 
-    Elem *newData = (Elem*) realloc(stk->data, capacity ON_CANARY_PROT(+2));
+    Elem *newData = (Elem*) realloc(stk->data ON_CANARY_PROT(-1), capacity ON_CANARY_PROT(+2));
     ASSERT(!isBadPtr(newData));
 
     StackSetDataMem (stk, newData ON_CANARY_PROT(+1));
@@ -451,6 +453,8 @@ ON_CANARY_PROT(
     flags |= (StackGetData(stk, -1) != CANARY ||
               StackGetData(stk, StackGetCapacity(stk)) != CANARY) ? STACK_CANARY_OVERWRITE_ERROR : 0;
 )
+    if (flags)
+        return flags;
 
 ON_HASH_PROT(
     flags |= (StackEvaluateHashData(stk) != StackGetHashData(stk))        ? STACK_HASH_DATA_DISPARITY_ERROR   : 0;
@@ -503,7 +507,7 @@ ON_DEBUG(
                         StackGetCapacity(stk),
                         StackGetDataMem(stk));
 ON_CANARY_PROT(
-    dprintf(fdLogBuffer, "\t(c)]t[-1] %ld\n",
+    dprintf(fdLogBuffer, "\t(c)\t[-1] = %ld\n",
                          StackGetDataMem(stk)[-1]);
 )
 
@@ -516,12 +520,19 @@ ON_CANARY_PROT(
                              i, StackGetData(stk, i));
 
 ON_CANARY_PROT(
-        dprintf(fdLogBuffer, "\t(c)\t[%ld] %ld",
-                             StackGetCapacity(stk) + 1,
-                             StackGetData(stk, StackGetCapacity(stk)));
+    dprintf(fdLogBuffer, "\t(c)\t[%ld] = %ld\n",
+                         StackGetCapacity(stk) + 1,
+                         StackGetData(stk, StackGetCapacity(stk)));
 )
 
-    dprintf(fdLogBuffer, "\t}\n}\n");
+ON_HASH_PROT(
+    dprintf(fdLogBuffer, "\thashData = %lx,\n"
+                         "\thashStk  = %lx\n",
+                         StackGetHashData(stk),
+                         StackGetHashStk(stk));
+)
+
+    dprintf(fdLogBuffer, "\t}\n}\n\n");
 )
 }
 
@@ -554,8 +565,9 @@ uint64_t StackEvaluateHashData(Stack *stk)
     ASSERT(!isBadPtr(stk));
     static const uint64_t x = 677;
     uint64_t hashData = 0;
-    for (long int i = 0; i < StackGetCapacity(stk); ++i)
-        hashData = hashData * x + StackGetData(stk, i);
+    for (long int i = 0; i < sizeof(stk->data) ON_CANARY_PROT(-1); ++i)
+        hashData = hashData * x + ((char*)stk->data)[i];
+    return hashData;
 }
 
 uint64_t StackEvaluateHashStk(Stack *stk)
@@ -566,6 +578,7 @@ uint64_t StackEvaluateHashStk(Stack *stk)
     uint64_t hashStk = 0;
     for (size_t i = 0; i < sizeof(Stack) - 2 * sizeof(uint64_t); ++i)
         hashStk = hashStk * x + *ptr++;
+    return hashStk;
 }
 
 void StackRehash(Stack *stk)
