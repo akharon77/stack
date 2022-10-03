@@ -162,13 +162,13 @@ ON_CANARY_PROT(
         ASSERT(!isBadPtr(stk));
         stk->data[-1]            = CANARY;
         stk->data[stk->capacity] = CANARY;
+        stk->canary1             = CANARY;
+        stk->canary2             = CANARY;
     ON_HASH_PROT(
         StackRehash(stk);
     )
     }
 )
-
-// --------------GETTERS--------------
 
 int64_t StackGetSize(Stack *stk)
 {
@@ -230,7 +230,9 @@ uint32_t StackError(Stack *stk)
 
 ON_CANARY_PROT(
     flags |= ((stk->data[-1]            != CANARY ||
-               stk->data[stk->capacity] != CANARY) ? STACK_CANARY_OVERWRITE_ERROR : 0);
+               stk->data[stk->capacity] != CANARY ||
+               stk->canary1             != CANARY ||
+               stk->canary2             != CANARY) ? STACK_CANARY_OVERWRITE_ERROR : 0);
 )
     if (flags)
         return flags;

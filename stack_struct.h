@@ -8,22 +8,29 @@
 
 struct Stack
 {
+ON_CANARY_PROT(
+    int64_t canary1;
+);
     int64_t size;
     int64_t capacity;
     Elem *data;
 
-    ON_DEBUG(
+ON_DEBUG(
     int64_t    line;
     const char* filename;
     const char* funcname;
     const char* name;
-    )
+)
 
-    ON_HASH_PROT(
+ON_HASH_PROT(
     uint64_t xCoeff;
     uint64_t hashData;
     uint64_t hashStk;
-    )
+)
+
+ON_CANARY_PROT(
+    int64_t canary2;
+)
 };
 
 #endif  // STACK_STRUCT_H
