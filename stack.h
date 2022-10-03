@@ -52,9 +52,9 @@ int64_t     StackGetSize          (Stack *stk);
 int64_t     StackGetCapacity      (Stack *stk);
 int64_t     StackGetCoeff         (Stack *stk);
 bool        isBadPtr              (void *ptr);
-ON_CANARY_PROT(
-void        StackCanaryUpdate     (Stack *stk);
-)
+// ON_CANARY_PROT(
+// void        StackCanaryUpdate     (Stack *stk);
+// )
 ON_DEBUG(
 void        StackDump             (Stack *stk);
 int         getfdLogBuffer        ();
@@ -67,7 +67,7 @@ uint64_t    StackEvaluateHashStk  (Stack *stk);
 void        StackRehash           (Stack *stk);
 )
 void        StackDump             (Stack *stk, const char* func, const char* file, long int line);
-const char* StackGetStatus        (Stack *stk);
+// const char* StackGetStatus        (Stack *stk);
 int64_t     max                   (int64_t a, int64_t b);
 
 #endif  // STACK_H

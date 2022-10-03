@@ -50,9 +50,10 @@ void StackDtor(Stack *stk)
     for (int64_t i = 0; i < sizeof(Stack) / sizeof(int64_t); ++i)
         *ptr++ = POISON;
 
-ON_DEBUG(
+ON_DEBUG
+    (
     closeLogBuffer();
-)
+    )
 }
 
 void StackPush(Stack *stk, Elem el)
@@ -155,7 +156,7 @@ ON_HASH_PROT(
 }
 
 ON_CANARY_PROT(
-    void StackCanaryUpdate(Stack *stk)
+    static void StackCanaryUpdate(Stack *stk)
     {
         ASSERT(!isBadPtr(stk));
         stk->data[-1]            = CANARY;
@@ -183,10 +184,10 @@ int64_t StackGetCapacity(Stack *stk)
 int64_t StackGetCoeff(Stack *stk)
 {
     ASSERT(!isBadPtr(stk));
-    return 2;
+    return 2; // TODO: formula
 }
 
-const char* StackGetStatus(Stack *stk)
+static const char* StackGetStatus(Stack *stk)
 {
     ASSERT(!isBadPtr(stk));
 
@@ -351,7 +352,7 @@ uint64_t StackEvaluateHashStk(Stack *stk)
 
     const char *ptr = (const char*) stk;
     uint64_t hashStk = 0;
-    for (int64_t i = 0; i < sizeof(Stack) - 2 * sizeof(uint64_t); ++i)
+    for (int64_t i = 0; i < sizeof(Stack) - (2 ON_CANARY_PROT(+1)) * sizeof(uint64_t); ++i)
         hashStk = hashStk * stk->xCoeff + *ptr++;
 
     return hashStk;
