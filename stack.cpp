@@ -12,10 +12,7 @@ const char* LOG_FILENAME = "stack.log";
 void StackCtor_(
                 Stack *stk,
                 int64_t capacity 
-                ON_DEBUG(, int64_t    line,
-                           const char* filename, 
-                           const char* funcname,
-                           const char* name)
+ON_DEBUG(     , DebugInfo info)
                )
 {
     ASSERT(!isBadPtr(stk));
@@ -32,10 +29,7 @@ ON_CANARY_PROT(
 )
 
 ON_DEBUG(
-    stk->line     = line;
-    stk->filename = filename;
-    stk->funcname = funcname;
-    stk->name     = name;
+    stk->info = info;
 )
 
 ON_HASH_PROT(
@@ -278,18 +272,22 @@ ON_DEBUG(
                         "Status: %s\n"
                         "%s at %s in %s(%ld): \n"
                         "{\n\tsize = %ld, \n"
-                        "\tcapacity = %ld, \n"
-                        "\tdata[%p] = \n\t{\n",
+                        "\tcapacity = %ld, \n",
                         func, file, line,
                         stk,
                         StackGetStatus(stk),
-                        stk->name, stk->funcname, stk->filename, stk->line,
+                        stk->info.name, stk->info.funcname, stk->info.filename, stk->info.line,
                         stk->size,
-                        stk->capacity,
-                        stk->data ON_CANARY_PROT(-1));
+                        stk->capacity);
 
 ON_CANARY_PROT(
-    dprintf(fdLogBuffer, "\t(c)\t[-1] = %ld\n", stk->data[-1]);
+    dprintf(fdLogBuffer, "\tcanary1 = %lx\n", stk->canary1);
+)
+
+    dprintf(fdLogBuffer, "\tdata[%p] = \n\t{\n", stk->data ON_CANARY_PROT(-1));
+
+ON_CANARY_PROT(
+    dprintf(fdLogBuffer, "\t(c)\t[-1] = %lx\n", stk->data[-1]);
 )
 
     for (int64_t i = 0; i < stk->size; ++i)
@@ -299,7 +297,7 @@ ON_CANARY_PROT(
         dprintf(fdLogBuffer, "\t\t[%ld] = %ld\n", i, stk->data[i]);
 
 ON_CANARY_PROT(
-    dprintf(fdLogBuffer, "\t(c)\t[%ld] = %ld\n",
+    dprintf(fdLogBuffer, "\t(c)\t[%ld] = %lx\n",
                          stk->capacity + 1,
                          stk->data[stk->capacity]);
 )
@@ -309,6 +307,10 @@ ON_HASH_PROT(
                          "\thashStk  = %lx\n",
                          stk->hashData,
                          stk->hashStk);
+)
+
+ON_CANARY_PROT(
+    dprintf(fdLogBuffer, "\tcanary2 = %lx\n", stk->canary2);
 )
 
     dprintf(fdLogBuffer, "\t}\n}\n\n");

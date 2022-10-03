@@ -14,22 +14,22 @@
 
 #ifdef _DEBUG
 
-#define StackCtor(stk, capacity)   \
-StackCtor_(                        \
-           stk,                    \
-           capacity,               \
-           __LINE__,               \
-           __FILE__,               \
-           __FUNCTION__,           \
-           #stk + (#stk[0] == '&') \
+#define StackCtor(stk, capacity)    \
+StackCtor_(                         \
+           stk,                     \
+           capacity,                \
+           {__LINE__,               \
+           __FILE__,                \
+           __FUNCTION__,            \
+           #stk + (#stk[0] == '&')} \
           )
 
 #else
 
-#define StackCtor(stk, capacity)   \
-StackCtor_(                        \
-           stk,                    \
-           capacity                \
+#define StackCtor(stk, capacity) \
+StackCtor_(                      \
+           stk,                  \
+           capacity              \
           )
 
 #endif
@@ -37,10 +37,7 @@ StackCtor_(                        \
 void StackCtor_(
                 Stack *stk,
                 int64_t capacity 
-                ON_DEBUG(, int64_t line,
-                           const char* filename, 
-                           const char* funcname,
-                           const char* name)
+ON_DEBUG(     , DebugInfo info)
                );
 
 void        StackDtor             (Stack *stk);

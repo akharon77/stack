@@ -1,6 +1,14 @@
 #ifndef STACK_DEBUG_H
 #define STACK_DEBUG_H
 
+struct DebugInfo
+{
+    int64_t    line;
+    const char* filename;
+    const char* funcname;
+    const char* name;
+};
+
 #define ASSERT(expr)                                        \
 do {                                                        \
     if (!(expr))                                            \

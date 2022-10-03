@@ -16,10 +16,7 @@ ON_CANARY_PROT(
     Elem *data;
 
 ON_DEBUG(
-    int64_t    line;
-    const char* filename;
-    const char* funcname;
-    const char* name;
+    DebugInfo info;
 )
 
 ON_HASH_PROT(
