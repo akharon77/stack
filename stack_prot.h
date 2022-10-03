@@ -29,5 +29,6 @@ const uint32_t STACK_HASH_DATA_DISPARITY_ERROR = 1 << 4;
 const uint32_t STACK_HASH_STK_DISPARITY_ERROR  = 1 << 5;
 )
 const uint32_t STACK_DATA_POSION_ERROR         = 1 << 6;
+const uint32_t STACK_DESTROYED_USAGE           = 1 << 7;
 
 #endif  // STACK_PROT_H

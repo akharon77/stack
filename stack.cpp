@@ -46,6 +46,10 @@ void StackDtor(Stack *stk)
 
     free(stk->data ON_CANARY_PROT(-1));
 
+    int64_t *ptr = (int64_t*) stk;
+    for (int64_t i = 0; i < sizeof(Stack) / sizeof(int64_t); ++i)
+        *ptr++ = POISON;
+
 ON_DEBUG(
     closeLogBuffer();
 )
@@ -211,11 +215,23 @@ ON_HASH_PROT(
 
     if (flags & STACK_DATA_POSION_ERROR)
         return "Stack integrity has been violated, unused stack memory accessed";
+
+    if (flags & STACK_DESTROYED_USAGE)
+        return "Attempt to reuse a destroyed stack";
 }
 
 uint32_t StackError(Stack *stk)
 {
     ASSERT(!isBadPtr(stk));
+
+    int64_t *ptr = (int64_t*) stk;
+    int64_t cntPoison = 0, size64 = sizeof(Stack) / sizeof(int64_t);
+    for (int64_t i = 0; i < size64; ++i)
+        cntPoison += *ptr == POISON;
+
+    if (cntPoison > 8 * size64 / 10)
+        return STACK_DESTROYED_USAGE;
+
     uint32_t flags = 0;
 
     flags |= ((stk->size     < 0)             ? STACK_SIZE_NEG_ERROR         : 0);

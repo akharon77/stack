@@ -17,5 +17,6 @@ int main()
     for (int i = 0; i < 100; ++i)
         StackPush(&stk1, i);
     StackDtor(&stk1);
+    StackPush(&stk1, 1);
     return 0;
 }
